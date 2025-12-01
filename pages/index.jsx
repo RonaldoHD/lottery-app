@@ -1,257 +1,297 @@
-import React, { useState } from 'react';
-import LoginModal from '../components/LoginModal';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
-import { lotteryData } from '../data/lotteryData';
+import { getAllDraws, getProductsByDrawId } from '../lib/pocketbase';
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [won, setWon] = useState(false);
+  const [draws, setDraws] = useState([]);
+  const [drawProducts, setDrawProducts] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
-  const product = lotteryData.currentProduct;
-  const entryFee = lotteryData.entryFee;
+  useEffect(() => {
+    loadDraws();
+  }, []);
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    setShowModal(false);
-  };
-
-  const handleClickToWin = () => {
-    const chance = Math.random();
-    if (chance > 0.5) {
-      setWon(true);
-    } else {
-      alert("Sorry, try again! Don't give up - your next attempt could be the winner!");
+  const loadDraws = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getAllDraws();
+      setDraws(data);
+      
+      // Load products for each draw
+      const productsMap = {};
+      for (const draw of data) {
+        const products = await getProductsByDrawId(draw.id);
+        productsMap[draw.id] = products;
+      }
+      setDrawProducts(productsMap);
+    } catch (error) {
+      console.error('Error loading draws:', error);
     }
+    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <div className="inline-block bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold mb-4 animate-pulse">
-                {lotteryData.hero.badge}
-              </div>
-              <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
-                {lotteryData.hero.headline}
-                <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {product.name}
-                </span>
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed">
-                {lotteryData.hero.subheadline}
-              </p>
+    <div className="min-h-screen bg-slate-950">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,#1e293b1a_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1a_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none"></div>
+      <div className="fixed inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-rose-500/5 pointer-events-none"></div>
 
-              {!isLoggedIn && (
-                <button
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-full text-xl font-bold shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300 mb-4"
-                  onClick={() => setShowModal(true)}
-                >
-                  {lotteryData.hero.ctaText}
-                </button>
-              )}
-              <p className="text-sm text-gray-500">Entry Fee: ${entryFee.toFixed(2)} • Secure Payment • Instant Entry</p>
+      {/* Header */}
+      <header className="relative bg-slate-900/80 backdrop-blur-xl border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/25">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">LuckyDraw</h1>
+                <p className="text-xs text-slate-400">Win Amazing Prizes</p>
+              </div>
             </div>
+            <Link
+              href="/admin/login"
+              className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+            >
+              Admin
+            </Link>
+          </div>
+        </div>
+      </header>
 
-            {/* Hero Image */}
-            <div className="flex justify-center mb-12">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-3xl blur-3xl opacity-50 transform rotate-6"></div>
-                <div className="relative bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    width={400}
-                    height={400}
-                    className="mx-auto rounded-2xl"
-                  />
-                </div>
-              </div>
+      {/* Hero Section */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-amber-500/20 to-rose-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            Live Draws Available
+          </div>
+          
+          <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            Win Your Dream
+            <span className="block bg-gradient-to-r from-amber-400 via-rose-400 to-amber-400 bg-clip-text text-transparent">
+              Prizes Today
+            </span>
+          </h2>
+          
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
+            Enter our exciting draws for a chance to win incredible prizes. 
+            Simple entry, transparent draws, real winners.
+          </p>
+          
+          <div className="flex flex-wrap justify-center gap-6 text-sm">
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Verified Draws
+            </div>
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Secure Payments
+            </div>
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Instant Entry
             </div>
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-12 text-gray-900">
-              Why This {product.shortName} is Life-Changing
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
-              {product.features.map((feature, index) => {
-                const gradientClasses = [
-                  "from-blue-50 to-blue-100 border-blue-200",
-                  "from-purple-50 to-purple-100 border-purple-200",
-                  "from-pink-50 to-pink-100 border-pink-200"
-                ];
+      {/* Draws Grid */}
+      <section className="relative py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <h3 className="text-3xl font-bold text-white">Active Draws</h3>
+              <p className="text-slate-400 mt-1">Choose a draw and enter for your chance to win</p>
+            </div>
+            <div className="text-slate-500 text-sm">
+              {draws.length} draw{draws.length !== 1 ? 's' : ''} available
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+            </div>
+          ) : draws.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h4 className="text-xl font-semibold text-white mb-2">No Active Draws</h4>
+              <p className="text-slate-500 max-w-md mx-auto">
+                There are no active draws at the moment. Check back soon for exciting new prizes!
+              </p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {draws.map((draw) => {
+                const products = drawProducts[draw.id] || [];
+                const mainProduct = products[0];
+                
                 return (
-                  <div key={index} className={`text-center p-6 rounded-xl bg-gradient-to-br ${gradientClasses[index]} border-2`}>
-                    <div className="text-5xl mb-4">{feature.icon}</div>
-                    <h3 className="text-xl font-bold mb-3 text-gray-900">{feature.title}</h3>
-                    <p className="text-gray-700">{feature.description}</p>
-                  </div>
+                  <Link
+                    key={draw.id}
+                    href={`/prize/${draw.id}`}
+                    className="group bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
+                  >
+                    {/* Image */}
+                    <div className="relative h-48 bg-slate-800 overflow-hidden">
+                      {draw.image_url ? (
+                        <img
+                          src={draw.image_url}
+                          alt={draw.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : mainProduct?.image_url ? (
+                        <img
+                          src={mainProduct.image_url}
+                          alt={mainProduct.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                          <svg className="w-16 h-16 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                      
+                      {/* Entry Fee Badge */}
+                      <div className="absolute top-4 right-4 bg-amber-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
+                        ${draw.entry_fee} Entry
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6">
+                      <h4 className="text-xl font-bold text-white mb-2 group-hover:text-amber-400 transition-colors">
+                        {draw.title}
+                      </h4>
+                      <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+                        {draw.description || 'Enter for a chance to win amazing prizes!'}
+                      </p>
+                      
+                      {/* Products Preview */}
+                      {products.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs text-slate-500 mb-2">Prizes Include:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {products.slice(0, 3).map((product) => (
+                              <span key={product.id} className="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded-md">
+                                {product.name}
+                              </span>
+                            ))}
+                            {products.length > 3 && (
+                              <span className="text-xs bg-slate-800 text-slate-500 px-2 py-1 rounded-md">
+                                +{products.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* CTA */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-amber-400 font-semibold text-sm group-hover:text-amber-300 transition-colors">
+                          Enter Now →
+                        </span>
+                        {mainProduct && (
+                          <span className="text-slate-500 text-sm">
+                            Worth ${mainProduct.retail_price}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      <section className="py-16 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-12 text-gray-900">
-              Real Winners, Real Stories
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
-              {lotteryData.testimonials.map((testimonial) => (
-                <div key={testimonial.id} className={`bg-white p-6 rounded-xl shadow-lg border-l-4 ${testimonial.borderColor}`}>
-                  <div className="flex items-center mb-4">
-                    <div className={`w-12 h-12 bg-gradient-to-br ${testimonial.gradient} rounded-full flex items-center justify-center text-white font-bold text-xl mr-4`}>
-                      {testimonial.initials}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                      <p className="text-sm text-gray-600">Won {testimonial.timeAgo}</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-700 italic">"{testimonial.comment}"</p>
-                  <div className="mt-4 text-yellow-500">⭐⭐⭐⭐⭐</div>
-                </div>
-              ))}
-            </div>
+      {/* Features Section */}
+      <section className="relative py-20 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h3 className="text-3xl font-bold text-white mb-4">How It Works</h3>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              Simple, transparent, and exciting. Here's how you can win.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 mb-2">
-                🏆 Over {lotteryData.stats.totalWinners.toLocaleString()}+ Happy Winners {lotteryData.stats.period}
-              </p>
-              <p className="text-gray-600">Join the community of winners today!</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Product Showcase Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl p-12 text-white text-center shadow-2xl">
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                {product.name} - The Ultimate Prize
-              </h2>
-              <div className="grid md:grid-cols-2 gap-8 items-center mb-8">
-                <div className="text-left space-y-4">
-                  {product.specifications.map((spec, index) => (
-                    <div key={index} className="flex items-start">
-                      <span className="text-2xl mr-3">✅</span>
-                      <div>
-                        <h3 className="font-bold text-lg mb-1">{spec.title}</h3>
-                        <p className="text-blue-100">{spec.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
-                  <Image
-                    src={product.showcaseImageUrl}
-                    alt={product.name}
-                    width={500}
-                    height={400}
-                    className="rounded-xl"
-                  />
-                </div>
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/25">
+                <span className="text-2xl font-bold text-white">1</span>
               </div>
-              <p className="text-2xl font-bold mb-6">
-                Retail Value: <span className="line-through text-blue-200">${product.retailPrice.toFixed(2)}</span> 
-                <span className="text-yellow-300 ml-2">Win for Just ${entryFee.toFixed(2)} Entry!</span>
+              <h4 className="text-xl font-semibold text-white mb-3">Choose a Draw</h4>
+              <p className="text-slate-400">
+                Browse our active draws and pick the prize you want to win.
               </p>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-br from-yellow-400 via-orange-400 to-red-400">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              {lotteryData.cta.headline}
-            </h2>
-            <p className="text-xl text-white mb-8 opacity-95">
-              {lotteryData.cta.description}
-            </p>
-            {!isLoggedIn ? (
-              <button
-                className="bg-white text-orange-600 px-12 py-5 rounded-full text-2xl font-bold shadow-2xl hover:shadow-white/50 transform hover:scale-110 transition-all duration-300 mb-4"
-                onClick={() => setShowModal(true)}
-              >
-                {lotteryData.cta.buttonText}
-              </button>
-            ) : (
-              <div className="bg-white rounded-2xl p-8 shadow-2xl">
-                {!won ? (
-                  <>
-                    <h3 className="text-3xl font-bold text-gray-900 mb-4">
-                      🎉 You're In! Ready to Win?
-                    </h3>
-                    <p className="text-gray-700 mb-6 text-lg">
-                      Click the button below to see if you're today's lucky winner!
-                    </p>
-                    <button
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-5 rounded-full text-xl font-bold shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 transition-all duration-300"
-                      onClick={handleClickToWin}
-                    >
-                      🍀 Try Your Luck Now!
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">🎊</div>
-                    <h3 className="text-4xl font-bold text-green-600 mb-4">
-                      CONGRATULATIONS!
-                    </h3>
-                    <p className="text-2xl text-gray-700 mb-6">
-                      You've won a {product.name}!
-                    </p>
-                    <p className="text-gray-600 mb-6">
-                      Our team will contact you within 24 hours to arrange delivery of your prize.
-                    </p>
-                    <div className="bg-green-100 rounded-xl p-6 border-2 border-green-400">
-                      <p className="text-lg font-semibold text-green-800">
-                        🎁 Check your email for prize claim instructions!
-                      </p>
-                    </div>
-                  </div>
-                )}
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/25">
+                <span className="text-2xl font-bold text-white">2</span>
               </div>
-            )}
-            <p className="text-white/90 mt-6 text-sm">
-              *Entry fee: ${entryFee.toFixed(2)}. Must be 18+ to enter. See terms and conditions.
-            </p>
+              <h4 className="text-xl font-semibold text-white mb-3">Enter & Pay</h4>
+              <p className="text-slate-400">
+                Submit your entry with a small fee for your chance to win.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/25">
+                <span className="text-2xl font-bold text-white">3</span>
+              </div>
+              <h4 className="text-xl font-semibold text-white mb-3">Win Big</h4>
+              <p className="text-slate-400">
+                Winners are selected randomly and notified immediately!
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-400 mb-2">
-            © 2024 iPhone Lottery. All rights reserved.
-          </p>
-          <p className="text-sm text-gray-500">
-            This is a promotional contest. Winners selected at random. 
-            Terms and conditions apply.
-          </p>
+      <footer className="relative bg-slate-900/80 border-t border-slate-800 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center gap-3 mb-6 md:mb-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-rose-500 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+              </div>
+              <span className="text-white font-semibold">LuckyDraw</span>
+            </div>
+            <p className="text-slate-500 text-sm text-center md:text-right">
+              © {new Date().getFullYear()} LuckyDraw. All rights reserved.
+              <br />
+              <span className="text-slate-600">Must be 18+ to enter. Terms and conditions apply.</span>
+            </p>
+          </div>
         </div>
       </footer>
-
-      {showModal && <LoginModal onLogin={handleLogin} />}
     </div>
   );
 }

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "next": "latest",
+    "pocketbase": "^0.21.1",
     "react": "latest",
     "react-dom": "latest"
   },
