@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getDrawById, getProductsByDrawId, createSubmission } from '../../lib/pocketbase';
+import Howtowin from '../../components/Howtowin';
 
 export default function PrizePage() {
   const router = useRouter();
@@ -220,38 +221,7 @@ export default function PrizePage() {
         )}
 
         {/* How to Win */}
-        <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">How to Win</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold">1</span>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-1">Enter Your Details</h3>
-                <p className="text-slate-400 text-sm">Provide your email and name to register your entry.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold">2</span>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-1">Complete Payment</h3>
-                <p className="text-slate-400 text-sm">Pay the entry fee securely to confirm your entry.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-rose-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold">3</span>
-              </div>
-              <div>
-                <h3 className="text-white font-semibold mb-1">Wait for the Draw</h3>
-                <p className="text-slate-400 text-sm">Winners are selected randomly and notified by email.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <Howtowin/>
       </main>
 
       {/* Entry Modal */}

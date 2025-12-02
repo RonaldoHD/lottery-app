@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getPocketBase, adminLogout as pbAdminLogout } from '../lib/pocketbase';
+import { getPocketBase, adminLogout as pbAdminLogout, getAdminAuthStore } from '../lib/pocketbase';
 
 const AdminContext = createContext(null);
 
@@ -10,15 +10,20 @@ export function AdminProvider({ children }) {
   useEffect(() => {
     // Check if admin is already authenticated
     const pb = getPocketBase();
-    if (pb.authStore.isValid && pb.authStore.model) {
-      setAdmin(pb.authStore.model);
+    const store = getAdminAuthStore();
+    if (store?.isValid && store?.model) {
+      setAdmin(store.model);
     }
     setLoading(false);
 
     // Listen for auth changes
-    pb.authStore.onChange((token, model) => {
+    const unsubscribe = pb.authStore.onChange((token, model) => {
       setAdmin(model);
     });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const login = async (email, password) => {
