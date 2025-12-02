@@ -1,35 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { getAllDraws, getProductsByDrawId } from '../lib/pocketbase';
 
 export default function Home() {
   const [draws, setDraws] = useState([]);
   const [drawProducts, setDrawProducts] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadDraws();
-  }, []);
-
-  const loadDraws = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getAllDraws();
-      setDraws(data);
-      
-      // Load products for each draw
-      const productsMap = {};
-      for (const draw of data) {
-        const products = await getProductsByDrawId(draw.id);
-        productsMap[draw.id] = products;
+    let mounted = true;
+    
+    const loadDraws = async () => {
+      try {
+        const data = await getAllDraws();
+        if (!mounted) return;
+        
+        setDraws(data || []);
+        setError(null);
+        
+        // Load products for each draw
+        if (data && data.length > 0) {
+          const productsMap = {};
+          for (const draw of data) {
+            try {
+              const products = await getProductsByDrawId(draw.id);
+              if (mounted) {
+                productsMap[draw.id] = products || [];
+              }
+            } catch (e) {
+              console.error('Error loading products for draw:', draw.id, e);
+            }
+          }
+          if (mounted) {
+            setDrawProducts(productsMap);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading draws:', err);
+        if (mounted) {
+          setError('Unable to connect to the server. Make sure PocketBase is running.');
+          setDraws([]);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-      setDrawProducts(productsMap);
-    } catch (error) {
-      console.error('Error loading draws:', error);
-    }
-    setIsLoading(false);
-  };
+    };
+
+    loadDraws();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -126,6 +151,21 @@ export default function Home() {
           {isLoading ? (
             <div className="flex justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-20">
+              <div className="w-20 h-20 bg-rose-900/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h4 className="text-xl font-semibold text-white mb-2">Connection Error</h4>
+              <p className="text-slate-500 max-w-md mx-auto mb-4">
+                {error}
+              </p>
+              <p className="text-slate-600 text-sm">
+                Run <code className="bg-slate-800 px-2 py-1 rounded">./pocketbase serve</code> in the backend folder
+              </p>
             </div>
           ) : draws.length === 0 ? (
             <div className="text-center py-20">

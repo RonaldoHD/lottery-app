@@ -3,6 +3,9 @@ node_modules/
 /.pnp
 .pnp.js
 
+# PocketBase Backend (deploy separately)
+/backend/
+
 # Testing
 /coverage
 
