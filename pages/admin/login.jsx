@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminLogin() {
@@ -34,36 +35,38 @@ export default function AdminLogin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+      <div className="page-container flex-center">
+        <div className="loader"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-rose-500/5"></div>
-      
+    <div className="page-container flex-center p-4">
       <div className="relative w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-500 to-rose-500 rounded-2xl mb-4 shadow-lg shadow-amber-500/25">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+          <div className="flex-center mb-4 gap-3">
+            <Image 
+              src="/logo.png" 
+              alt="WinZone Logo" 
+              width={64} 
+              height={64} 
+              className="w-16 h-16 object-contain"
+              priority
+            />
+            <span className="text-2xl sm:text-3xl font-bold text-white">Winzone</span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Admin Portal</h1>
-          <p className="text-slate-400 mt-2">Sign in to manage draws & prizes</p>
+          <h1 className="heading-2">Admin Portal</h1>
+          <p className="text-body-sm mt-2">Sign in to manage draws & prizes</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        <div className="card-dark card-padding shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="badge-error bg-rose-500/10 border border-rose-500/50 text-rose-400 px-4 py-3 rounded-xl text-responsive-xs flex items-center gap-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {error}
@@ -71,28 +74,28 @@ export default function AdminLogin() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="form-label">
                 Email Address
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-800/50 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all placeholder-slate-500"
+                className="form-input"
                 placeholder="admin@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="form-label">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-800/50 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all placeholder-slate-500"
+                className="form-input"
                 placeholder="••••••••"
                 required
               />
@@ -101,10 +104,10 @@ export default function AdminLogin() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-amber-500 to-rose-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-amber-600 hover:to-rose-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+              className="btn-primary-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
+                <span className="flex-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -117,8 +120,8 @@ export default function AdminLogin() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-800">
-            <p className="text-slate-500 text-sm text-center">
+          <div className="mt-6 pt-6 border-t border-winzone-purple-light">
+            <p className="text-muted text-center">
               Only administrators can access this portal.
               <br />
               <span className="text-slate-600">Configure admin in PocketBase dashboard.</span>
@@ -127,8 +130,8 @@ export default function AdminLogin() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-slate-600 text-sm mt-6">
-          &copy; {new Date().getFullYear()} Lottery App. Admin Panel.
+        <p className="text-center text-slate-600 text-responsive-xs mt-6">
+          &copy; {new Date().getFullYear()} WinZone. Admin Panel.
         </p>
       </div>
     </div>

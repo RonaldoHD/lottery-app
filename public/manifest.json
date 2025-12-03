@@ -1,0 +1,43 @@
+{
+  "name": "WinZone - Win Amazing Prizes",
+  "short_name": "WinZone",
+  "description": "Enter exciting draws for a chance to win incredible prizes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a0b2e",
+  "theme_color": "#FF6B35",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "games"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "View Draws",
+      "short_name": "Draws",
+      "description": "View all active draws",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin",
+      "short_name": "Admin",
+      "description": "Admin dashboard",
+      "url": "/admin/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

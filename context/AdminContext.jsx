@@ -1,36 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getPocketBase, adminLogout as pbAdminLogout, getAdminAuthStore } from '../lib/pocketbase';
+import { useRouter } from 'next/router';
+import { getAdminAuthStore, adminLogout as pbAdminLogout } from '../lib/pocketbase';
 
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    // Check if admin is already authenticated
-    const pb = getPocketBase();
-    const store = getAdminAuthStore();
-    if (store?.isValid && store?.model) {
-      setAdmin(store.model);
+    // Only check auth if we're on an admin page - NO API CALLS
+    const isAdminPage = router.pathname?.startsWith('/admin');
+    
+    if (isAdminPage) {
+      // Check auth synchronously from cookie/cache only - NO API CALL
+      const store = getAdminAuthStore();
+      if (store?.isValid && store?.model) {
+        setAdmin(store.model);
+      } else if (router.pathname !== '/admin/login') {
+        // Redirect to login if not authenticated and not already on login page
+        router.push('/admin/login');
+      }
     }
     setLoading(false);
-
-    // Listen for auth changes
-    const unsubscribe = pb.authStore.onChange((token, model) => {
-      setAdmin(model);
-    });
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
+  }, [router.pathname]);
 
   const login = async (email, password) => {
+    const { getPocketBase } = await import('../lib/pocketbase');
     const pb = getPocketBase();
     try {
-      // PocketBase v0.20+ uses _superusers collection
-      const authData = await pb.collection('_superusers').authWithPassword(email, password);
+      // Use admins API for authentication
+      const authData = await pb.admins.authWithPassword(email, password);
       setAdmin(authData.record);
       return authData;
     } catch (error) {
@@ -41,11 +42,13 @@ export function AdminProvider({ children }) {
   const logout = () => {
     pbAdminLogout();
     setAdmin(null);
+    router.push('/admin/login');
   };
 
   const isAuthenticated = () => {
-    const pb = getPocketBase();
-    return pb.authStore.isValid && admin !== null;
+    // Check synchronously from cache/cookie - NO API CALL
+    const store = getAdminAuthStore();
+    return store?.isValid && admin !== null;
   };
 
   return (
@@ -62,3 +65,5 @@ export function useAdmin() {
   }
   return context;
 }
+
+
