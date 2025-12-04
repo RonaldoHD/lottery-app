@@ -402,7 +402,7 @@ body {
   color: var(--text-white);
   font-size: 0.875rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   transition: all 0.2s;
 }
 
@@ -415,6 +415,17 @@ body {
 .form-input::placeholder {
   color: var(--text-slate-500);
 }
+
+/* hide scrollbar but allow scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+
 
 @media (min-width: 640px) {
   .form-input {

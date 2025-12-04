@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase';
 
-const POCKETBASE_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://pocketbase-j884wkkkcwws8s8sk8wc0kw0.72.61.197.220.sslip.io';
+const POCKETBASE_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://api.mycoolifyserver.online';
 
 // Helper to remove undefined/null values from an object
 function cleanOptions(obj) {
@@ -168,14 +168,14 @@ export default async function handler(req, res) {
         const cookieNameValue = cookieValue.split(';')[0];
         const isProduction = process.env.NODE_ENV === 'production';
         
-        // Build secure cookie string
+        // Build cookie string - NOT HttpOnly so JavaScript can read auth state
         let secureCookie = cookieNameValue;
         secureCookie += '; Path=/';
-        secureCookie += '; SameSite=Strict';
+        secureCookie += '; SameSite=Lax'; // Lax for better compatibility
         if (isProduction) {
           secureCookie += '; Secure';
         }
-        secureCookie += '; HttpOnly';
+        // Remove HttpOnly so client can check auth state
         // Set max age (30 days)
         secureCookie += '; Max-Age=2592000';
         
@@ -186,11 +186,10 @@ export default async function handler(req, res) {
       const isProduction = process.env.NODE_ENV === 'production';
       let clearCookie = 'pb_auth=';
       clearCookie += '; Path=/';
-      clearCookie += '; SameSite=Strict';
+      clearCookie += '; SameSite=Lax';
       if (isProduction) {
         clearCookie += '; Secure';
       }
-      clearCookie += '; HttpOnly';
       clearCookie += '; Max-Age=0';
       clearCookie += '; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
       

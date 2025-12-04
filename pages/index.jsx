@@ -62,7 +62,7 @@ export default function Home() {
   return (
     <div className="page-container">
       {/* Header */}
-      <header className="header-main">
+      <header className=" ">
         <div className="container-main">
           <div className="header-content">
             <Link href="/" className="flex items-center gap-3">
@@ -76,9 +76,7 @@ export default function Home() {
               />
               <span className="text-xl font-bold text-white">Winzone</span>
             </Link>
-            <Link href="/admin/login" className="btn-link-sm">
-              Admin
-            </Link>
+           
           </div>
         </div>
       </header>

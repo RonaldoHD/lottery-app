@@ -5,6 +5,23 @@ import Image from 'next/image';
 import { getDrawById, getProductsByDrawId, createSubmission } from '../../lib/pocketbase';
 import HowToWin from '../../components/Howtowin';
 
+
+
+const securedpayment = (
+  <div className=" flex flex-col mt-4" >
+    <p className="text-muted   mb-3">
+      Secure payment with whish • Instant entry
+    </p>
+
+    <img
+      src="https://play-lh.googleusercontent.com/xHb69kCRdCQOi5wZoX0zuCV3CwmCxAH-qR35qNWJJ0VpRT7NNnpyakciHkivdyvLxCw"
+      alt="whish payment"
+      className="w-full h-full object-contain rounded-lg w-[60px] h-[40px] object-cover"
+    />
+  </div>
+)
+
+
 export default function PrizePage() {
   const router = useRouter();
   const { id } = router.query;
@@ -147,26 +164,7 @@ export default function PrizePage() {
                 <span className="hero-pulse"></span>
                 Draw Active
               </div>
-              {draw.end_date && (
-                <div className="countdown-container flex items-center text-body-sm">
-                  <svg
-                    className="w-4 h-4 text-[var(--winzone-orange)]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span>
-                    Ends in {countdown.days} days, {countdown.hours}h {String(countdown.minutes).padStart(2, '0')}mins
-                  </span>
-                </div>
-              )}
+
 
             </div>
 
@@ -188,17 +186,40 @@ export default function PrizePage() {
               </div>
             </div>
 
+            {draw.end_date && (
+              <div className="countdown-container flex items-center text-body-sm mb-6">
+                <svg
+                  className="w-4 h-4 text-[var(--winzone-orange)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>
+                  Ends in {countdown.days} days, {countdown.hours}h {String(countdown.minutes).padStart(2, '0')}m {String(countdown.seconds).padStart(2, '0')}s
+                </span>
+              </div>
+            )}
+
+
             {/* CTA with glow */}
             <button
               onClick={() => setShowEntryModal(true)}
-              className="btn-glow"
+              className="btn-glow mb-4"
             >
               Enter Draw for NOW !!
             </button>
 
-            <p className="text-muted text-center mt-3 sm:mt-4">
-              Secure payment • Instant entry • Fair draw
-            </p>
+
+
+            {securedpayment}
+
           </div>
 
 
@@ -255,8 +276,8 @@ export default function PrizePage() {
 
       {/* Entry Modal */}
       {showEntryModal && (
-        <div className="modal-overlay">
-          <div className="modal-container">
+        <div className="modal-overlay ">
+          <div className="modal-container scrollbar-hide">
             {submitSuccess ? (
               <div className="p-6 sm:p-8 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[rgba(16,185,129,0.2)] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
@@ -280,7 +301,8 @@ export default function PrizePage() {
                 </button>
               </div>
             ) : (
-              <>
+              < >
+
                 <div className="modal-header">
                   <h2 className="modal-header-title">Enter to Win</h2>
                   <p className="modal-header-subtitle">{draw.title}</p>
@@ -331,7 +353,7 @@ export default function PrizePage() {
                       value={entryForm.phone}
                       onChange={(e) => setEntryForm({ ...entryForm, phone: e.target.value })}
                       className="form-input"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder="+961"
                       required
                     />
                   </div>
@@ -352,11 +374,11 @@ export default function PrizePage() {
                       {isSubmitting ? 'Submitting...' : `Pay $${draw.entry_fee} & Enter`}
                     </button>
                   </div>
-
-                  <p className="text-muted text-center">
-                    By entering, you agree to the terms and conditions.
-                  </p>
+ 
+                  {securedpayment}
                 </form>
+
+                <HowToWin />
               </>
             )}
           </div>
