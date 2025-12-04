@@ -40,6 +40,11 @@
   --text-slate-400: #94a3b8;
   --text-slate-500: #64748b;
   --text-slate-600: #475569;
+
+
+  --winzone-green-success: #34d399;
+  --winzone-green-success-light: #10b981;
+
   
   /* Background Colors */
   --bg-black-70: rgba(0, 0, 0, 0.7);
@@ -95,6 +100,12 @@ body {
   min-height: 100vh;
   background-color: var(--winzone-purple);
 }
+
+.bg-primary{
+  background-color: var(--winzone-orange);
+}
+
+ 
 
 .container-main {
   max-width: 1280px;
@@ -255,7 +266,7 @@ body {
 }
 
 .btn-primary-md {
-  padding: 0.5rem 1rem;
+  padding: 1rem 2rem;
   font-size: 0.75rem;
 }
 
@@ -270,7 +281,7 @@ body {
   background-color: var(--winzone-orange);
   color: var(--text-white);
   font-weight: 600;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem!important;
   transition: all 0.2s;
   box-shadow: 0 10px 15px -3px var(--winzone-orange-25), 0 4px 6px -2px var(--winzone-orange-25);
   padding: 0.75rem 1.5rem;
@@ -684,11 +695,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: var(--winzone-orange-10);
-  border: 1px solid var(--winzone-orange-20);
-  color: var(--winzone-orange);
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
   padding: 0.5rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 9px;
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -715,7 +726,7 @@ body {
   height: 100%;
   width: 100%;
   border-radius: 9999px;
-  background-color: var(--winzone-orange);
+  background-color: #10b981;
   opacity: 0.75;
 }
 
@@ -726,13 +737,150 @@ body {
   border-radius: 9999px;
   height: 0.5rem;
   width: 0.5rem;
-  background-color: var(--winzone-orange);
+  background-color: #10b981;
 }
 
 @keyframes ping {
   75%, 100% {
     transform: scale(2);
     opacity: 0;
+  }
+}
+
+/* ============================================
+   COUNTDOWN TIMER
+   ============================================ */
+.countdown-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--winzone-purple-light-50);
+  border: 1px solid var(--winzone-purple-light);
+  padding: 0.5rem 0.75rem;
+  border-radius: 9px;
+}
+
+@media (min-width: 640px) {
+  .countdown-container {
+    padding: 0.5rem 1rem;
+  }
+}
+
+.countdown-items {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.countdown-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .countdown-item {
+    min-width: 2rem;
+  }
+}
+
+.countdown-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-white);
+  line-height: 1;
+}
+
+@media (min-width: 640px) {
+  .countdown-value {
+    font-size: 1rem;
+  }
+}
+
+.countdown-label {
+  font-size: 0.625rem;
+  color: var(--text-slate-500);
+  text-transform: uppercase;
+}
+
+.countdown-separator {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--winzone-orange);
+ }
+
+/* ============================================
+   GLOWING CTA BUTTON
+   ============================================ */
+.btn-glow {
+  position: relative;
+  width: 100%;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-white);
+  background-color: var(--winzone-orange);
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@media (min-width: 640px) {
+  .btn-glow {
+    padding: 1.125rem 2.5rem;
+    font-size: 1.125rem;
+  }
+}
+
+.btn-glow:hover {
+  background-color: var(--winzone-orange-dark);
+  transform: scale(1.02);
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shine 2s infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 5px var(--winzone-orange),
+      0 0 10px var(--winzone-orange),
+      0 0 20px var(--winzone-orange-50),
+      0 0 40px var(--winzone-orange-25);
+  }
+  50% {
+    box-shadow: 
+      0 0 10px var(--winzone-orange),
+      0 0 20px var(--winzone-orange),
+      0 0 40px var(--winzone-orange-50),
+      0 0 60px var(--winzone-orange-25);
+  }
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  50%, 100% {
+    left: 100%;
   }
 }
 

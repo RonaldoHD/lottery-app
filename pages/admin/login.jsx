@@ -104,7 +104,7 @@ export default function AdminLogin() {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn-primary-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary py-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="flex-center gap-2">

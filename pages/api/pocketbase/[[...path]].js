@@ -1,8 +1,18 @@
 import PocketBase from 'pocketbase';
 
-const POCKETBASE_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://pocketbase-j884wkkkcwws8s8sk8wc0kw0.72.61.197.220.sslip.io/';
+const POCKETBASE_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://pocketbase-j884wkkkcwws8s8sk8wc0kw0.72.61.197.220.sslip.io';
+
+// Helper to remove undefined/null values from an object
+function cleanOptions(obj) {
+  if (!obj || typeof obj !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+  );
+}
 
 export default async function handler(req, res) {
+
+  console.log('req.method', req.body);
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -47,28 +57,33 @@ export default async function handler(req, res) {
 
     switch (operation) {
       case 'getFullList':
-        result = await pb.collection(collection).getFullList({
-          filter: params.filter,
-          sort: params.sort,
-          expand: params.expand,
-        });
+        result = await pb.collection(collection).getFullList(
+          cleanOptions({
+            filter: params.filter,
+            sort: params.sort,
+            expand: params.expand,
+          })
+        );
         break;
 
       case 'getOne':
-        result = await pb.collection(collection).getOne(recordId, {
-          expand: params.expand,
-        });
+        result = await pb.collection(collection).getOne(
+          recordId,
+          cleanOptions({
+            expand: params.expand,
+          })
+        );
         break;
 
       case 'getList':
         result = await pb.collection(collection).getList(
           params.page || 1,
           params.perPage || 30,
-          {
+          cleanOptions({
             filter: params.filter,
             sort: params.sort,
             expand: params.expand,
-          }
+          })
         );
         break;
 

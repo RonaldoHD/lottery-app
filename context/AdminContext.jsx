@@ -18,7 +18,9 @@ export function AdminProvider({ children }) {
       const store = getAdminAuthStore();
       if (store?.isValid && store?.model) {
         setAdmin(store.model);
+        console.log('admin', admin);
       } else if (router.pathname !== '/admin/login') {
+        console.log('redirecting to login');
         // Redirect to login if not authenticated and not already on login page
         router.push('/admin/login');
       }
