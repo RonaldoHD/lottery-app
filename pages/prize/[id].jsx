@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getDrawById, getProductsByDrawId, createSubmission } from '../../lib/pocketbase';
 import HowToWin from '../../components/Howtowin';
+import Footer from '../../components/Footer';
 
 
 
@@ -16,7 +17,7 @@ const securedpayment = (
     <img
       src="https://play-lh.googleusercontent.com/xHb69kCRdCQOi5wZoX0zuCV3CwmCxAH-qR35qNWJJ0VpRT7NNnpyakciHkivdyvLxCw"
       alt="whish payment"
-      className="w-full h-full object-contain rounded-lg w-[60px] h-[40px] object-cover"
+      className=" object-contain rounded-lg w-[50px] h-[35px] object-cover"
     />
   </div>
 )
@@ -213,7 +214,7 @@ export default function PrizePage() {
               onClick={() => setShowEntryModal(true)}
               className="btn-glow mb-4"
             >
-              Enter Draw for NOW !!
+              Enter Draw NOW !!
             </button>
 
 
@@ -384,6 +385,8 @@ export default function PrizePage() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }
