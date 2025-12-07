@@ -23,6 +23,44 @@ const securedpayment = (
 )
 
 
+// Ebook Component
+function EbookBox({ imageUrl, title = "Ebook", pages = "52 pages", price = "$2" }) {
+  return (
+    <div className="bg-[var(--winzone-purple-light)]/30 border border-[var(--winzone-purple-light)] rounded-xl p-4 mb-6 sm:mb-8">
+      <div className="flex items-center gap-4">
+        {imageUrl && (
+          <div className="flex-shrink-0">
+            <img
+              src={imageUrl}
+              alt={title}
+              className="w-[70px]   object-cover rounded-lg"
+            />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-slate-400 text-xs sm:text-sm mb-2">
+            Ebook
+          </p>
+          <h3 className="text-white font-semibold text-sm sm:text-base mb-1 truncate">
+            {title}
+          </h3>
+          <p className="text-slate-400 text-xs sm:text-sm mb-2">
+            {pages}
+          </p>
+
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-lg sm:text-xl font-bold text-[var(--winzone-orange)]">
+            {price}
+          </span>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function PrizePage() {
   const router = useRouter();
   const { id } = router.query;
@@ -33,6 +71,8 @@ export default function PrizePage() {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [ebookDownloaded, setEbookDownloaded] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [entryForm, setEntryForm] = useState({
     first_name: '',
@@ -43,6 +83,13 @@ export default function PrizePage() {
   useEffect(() => {
     if (id) {
       loadDrawData();
+    }
+    // Check if ebook was already downloaded
+    if (typeof window !== 'undefined') {
+      const downloaded = localStorage.getItem('ebook_downloaded');
+      if (downloaded === 'true') {
+        setEbookDownloaded(true);
+      }
     }
   }, [id]);
 
@@ -175,17 +222,13 @@ export default function PrizePage() {
               {draw.description || 'Enter for a chance to win this amazing prize!'}
             </p>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
-              <div className="stat-card">
-                <p className="stat-label">Entry Fee</p>
-                <p className="stat-value">${draw.entry_fee}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Prizes</p>
-                <p className="stat-value">{products.length}</p>
-              </div>
-            </div>
+            {/* Ebook Box */}
+            <EbookBox
+              imageUrl="https://api.mycoolifyserver.online/api/files/pbc_121766130/tbgqwtns4j4sf13/book_cover_t44vp0ufxp.jpg?token="
+              title="Selling without fear"
+              pages="52 pages"
+              price="$2"
+            />
 
             {draw.end_date && (
               <div className="countdown-container flex items-center text-body-sm mb-6">
@@ -287,9 +330,73 @@ export default function PrizePage() {
                   </svg>
                 </div>
                 <h2 className="heading-2 mb-3 sm:mb-4">Entry Submitted!</h2>
-                <p className="text-body-sm mb-6 sm:mb-8">
+                <p className="text-body-sm mb-4 sm:mb-6">
                   Your entry has been recorded. You'll be notified by phone if you win!
                 </p>
+                
+                {/* Ebook Download Section */}
+                <div className="bg-[var(--winzone-purple-light)]/30   rounded-xl  mb-6 sm:mb-8">
+                  <p className="text-white text-sm sm:text-base font-medium mb-3">
+                    Get Your Free Ebook!
+                  </p>
+                  {ebookDownloaded ? (
+                    <div className="w-full px-6 py-3 bg-[rgba(16,185,129,0.2)] border border-[#10b981] rounded-lg flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-[#10b981] font-semibold">Ebook Downloaded</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        setIsDownloading(true);
+                        try {
+                          const response = await fetch('https://api.mycoolifyserver.online/api/files/pbc_1389469579/gedil7k1eqqt8xy/selling_without_fear_ebook_akw6mj06p0.pdf?token=');
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = 'Selling_Without_Fear.pdf';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                          
+                          // Mark as downloaded
+                          setEbookDownloaded(true);
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('ebook_downloaded', 'true');
+                          }
+                        } catch (error) {
+                          console.error('Download error:', error);
+                          alert('Failed to download ebook. Please try again.');
+                        } finally {
+                          setIsDownloading(false);
+                        }
+                      }}
+                      disabled={isDownloading}
+                      className="w-full px-6 py-3 bg-[var(--winzone-orange)] hover:bg-[var(--winzone-orange)]/90 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDownloading ? (
+                        <>
+                          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Download Ebook
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+
                 <button
                   onClick={() => {
                     setShowEntryModal(false);
@@ -305,15 +412,19 @@ export default function PrizePage() {
               < >
 
                 <div className="modal-header">
-                  <h2 className="modal-header-title">Enter to Win</h2>
+                  <h2
+                    className="modal-header-title">Enter to Win</h2>
                   <p className="modal-header-subtitle">{draw.title}</p>
                 </div>
                 <form onSubmit={handleSubmitEntry} className="modal-body">
-                  <div className="  mb-2 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-body-sm">Entry Fee :</span>
-                      <span className="stat-value">${draw.entry_fee}</span>
-                    </div>
+                  <div className="mb-4">
+                    <EbookBox
+                      imageUrl="https://api.mycoolifyserver.online/api/files/pbc_121766130/tbgqwtns4j4sf13/book_cover_t44vp0ufxp.jpg?token="
+                      title="Selling without fear"
+                      pages="52 pages"
+                      price="$2"
+                    />
+
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -375,7 +486,7 @@ export default function PrizePage() {
                       {isSubmitting ? 'Submitting...' : `Pay $${draw.entry_fee} & Enter`}
                     </button>
                   </div>
- 
+
                   {securedpayment}
                 </form>
 
