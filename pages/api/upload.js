@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     // Parse the form data
     const form = formidable({
       keepExtensions: true,
-      maxFileSize: 10 * 1024 * 1024, // 10MB max
+      maxFileSize: 50 * 1024 * 1024, // 50MB max (for PDFs)
     });
 
     const [fields, files] = await new Promise((resolve, reject) => {
@@ -32,7 +32,14 @@ export default async function handler(req, res) {
 
     const uploadedFile = files.image?.[0] || files.image;
     if (!uploadedFile) {
-      return res.status(400).json({ error: 'No image file provided' });
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    // Validate file type (images or PDFs)
+    const allowedTypes = ['image/', 'application/pdf'];
+    const isValidType = allowedTypes.some(type => uploadedFile.mimetype?.startsWith(type));
+    if (!isValidType) {
+      return res.status(400).json({ error: 'File must be an image (jpg, png, etc.) or PDF' });
     }
 
     // Get optional parameters
@@ -43,54 +50,166 @@ export default async function handler(req, res) {
     const pb = new PocketBase(POCKETBASE_URL);
 
     // Load auth from cookie if present
+    let isAdminAuthenticated = false;
     if (req.headers.cookie) {
       try {
         pb.authStore.loadFromCookie(req.headers.cookie);
+        // Check if we have valid admin auth
+        // Admin auth is valid if authStore.isValid is true
+        // We can also check if it's admin by trying to access admin methods
+        if (pb.authStore.isValid) {
+          // Try to verify it's admin auth by checking if we can access admin methods
+          try {
+            // This will throw if not admin, or succeed if admin
+            const adminRecord = pb.authStore.model;
+            // If model exists and we have a token, assume it's valid
+            if (adminRecord && pb.authStore.token) {
+              isAdminAuthenticated = true;
+            }
+          } catch (e) {
+            // Not admin auth, continue to try env vars
+          }
+        }
       } catch (e) {
         console.error('Error loading auth cookie:', e);
       }
     }
 
-    // Read the file and create a File object for PocketBase
-    const fileBuffer = fs.readFileSync(uploadedFile.filepath);
-    const fileName = uploadedFile.originalFilename || `image_${Date.now()}.jpg`;
-    const blob = new Blob([fileBuffer], { type: uploadedFile.mimetype });
-    const file = new File([blob], fileName, { type: uploadedFile.mimetype });
+    // If not authenticated as admin, try to authenticate as admin using environment variables
+    if (!isAdminAuthenticated) {
+      const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
+      const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
+      
+      if (adminEmail && adminPassword) {
+        try {
+          await pb.admins.authWithPassword(adminEmail, adminPassword);
+          isAdminAuthenticated = true;
+        } catch (authError) {
+          console.error('Admin authentication failed:', authError);
+          return res.status(401).json({
+            error: 'Admin authentication required for uploads. Please log in as admin in the dashboard first, or configure POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD environment variables.',
+          });
+        }
+      } else {
+        return res.status(401).json({
+          error: 'Admin authentication required. Please log in as admin in the dashboard first, or configure POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD environment variables.',
+          hint: 'Make sure you are logged in to the admin dashboard before uploading images.',
+        });
+      }
+    }
+
+    // Generate appropriate file name based on file type
+    const isPDF = uploadedFile.mimetype === 'application/pdf';
+    const defaultExtension = isPDF ? '.pdf' : '.jpg';
+    const defaultPrefix = isPDF ? 'ebook_content' : 'image';
+    const fileName = uploadedFile.originalFilename || `${defaultPrefix}_${Date.now()}${defaultExtension}`;
 
     let result;
     let imageUrl;
 
-    // Check if we're updating an existing record or creating new
-    if (recordId && collection !== 'uploads') {
-      // Update existing record with new image
-      const formData = new FormData();
-      formData.append('image', file);
+    // Read file and create File object for PocketBase SDK
+    // PocketBase SDK works best with File/Blob objects (Node.js 18+)
+    const filePath = uploadedFile.filepath;
+    const fileBuffer = fs.readFileSync(filePath);
+    const blob = new Blob([fileBuffer], { type: uploadedFile.mimetype });
+    const file = new File([blob], fileName, { type: uploadedFile.mimetype });
 
-      result = await pb.collection(collection).update(recordId, formData);
+    // Check if we're updating an existing record or creating new
+    if (recordId && collection !== 'uploads' && collection !== 'ebooks_content') {
+      // Update existing record with new image
+      result = await pb.collection(collection).update(recordId, { image: file });
       
       // Get the file URL from PocketBase
       if (result.image) {
         imageUrl = pb.files.getUrl(result, result.image);
       }
     } else {
-      // Create a new record in the uploads collection
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', fileName);
-
+      // Create a new record in the specified collection
+      // Use plain object with File - PocketBase SDK handles this correctly
       try {
-        result = await pb.collection('uploads').create(formData);
+        // Ensure we're authenticated as admin before creating
+        if (!pb.authStore.isValid) {
+          return res.status(401).json({
+            error: 'Admin authentication required. Please log in as admin first.',
+          });
+        }
+
+        // Create data object based on collection type
+        const data = collection === 'ebooks_content' 
+          ? { content: file }  // For ebooks_content, use 'content' field
+          : { file, name: fileName }; // For uploads, use 'file' and 'name'
+
+        result = await pb.collection(collection).create(data);
         
         // Get the file URL from PocketBase
-        if (result.file) {
-          imageUrl = pb.files.getUrl(result, result.file);
+        // For ebooks_content, the field is 'content'; for uploads, it's 'file' or 'image'
+        if (collection === 'ebooks_content') {
+          if (result.content) {
+            imageUrl = pb.files.getUrl(result, result.content);
+          }
+        } else {
+          // Check all possible file field names for uploads collection
+          if (result.file) {
+            imageUrl = pb.files.getUrl(result, result.file);
+          } else if (result.image) {
+            imageUrl = pb.files.getUrl(result, result.image);
+          } else {
+            // Try to find any file field
+            const fileFields = Object.keys(result).filter(key => 
+              typeof result[key] === 'string' && result[key].includes('/api/files/')
+            );
+            if (fileFields.length > 0) {
+              imageUrl = pb.files.getUrl(result, result[fileFields[0]]);
+            }
+          }
+        }
+        
+        // Fallback: construct URL manually if we have the record ID
+        if (!imageUrl) {
+          const fileField = collection === 'ebooks_content' ? 'content' : (result.file || result.image || 'file');
+          if (result.id && fileField) {
+            imageUrl = `${POCKETBASE_URL}/api/files/${collection}/${result.id}/${fileField}`;
+          }
+        }
+        
+        // Ensure we have a full URL (not relative)
+        if (imageUrl && !imageUrl.startsWith('http')) {
+          imageUrl = `${POCKETBASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
         }
       } catch (error) {
-        // If uploads collection doesn't exist, provide helpful error
-        if (error.status === 404 || error.message?.includes('uploads')) {
+        console.error('Upload collection error:', error);
+        console.error('Error details:', {
+          status: error.status,
+          message: error.message,
+          data: error.data,
+          response: error.response,
+        });
+        
+        // Handle 503 Service Unavailable (server error)
+        if (error.status === 503) {
+          return res.status(503).json({
+            error: 'PocketBase server error. The server may be temporarily unavailable or the file might be too large.',
+            details: error.message || 'Service temporarily unavailable',
+            suggestion: 'Try again in a moment, or check if the file size is within limits (50MB for PDFs, 10MB for images).',
+          });
+        }
+        
+        // If collection doesn't exist, provide helpful error
+        if (error.status === 404 || error.message?.includes(collection)) {
+          const collectionName = collection === 'ebooks_content' ? 'ebooks_content' : 'uploads';
+          const fieldInfo = collection === 'ebooks_content' 
+            ? 'content (file type, max 50MB, allowed: application/pdf)'
+            : 'name (text) and file (file type, max 10MB, allowed: image/*)';
           return res.status(400).json({
-            error: 'The "uploads" collection does not exist in PocketBase. Please create it first.',
-            instructions: 'Go to PocketBase admin, create a collection named "uploads" with fields: name (text) and file (file type, max 10MB, allowed: image/*)'
+            error: `The "${collectionName}" collection does not exist in PocketBase. Please create it first.`,
+            instructions: `Go to PocketBase admin, create a collection named "${collectionName}" with fields: ${fieldInfo}`
+          });
+        }
+        // If permission denied, provide helpful error
+        if (error.status === 403 || error.status === 401) {
+          return res.status(403).json({
+            error: 'Permission denied. Admin authentication required to upload files.',
+            details: error.message || 'Please ensure you are logged in as admin.',
           });
         }
         throw error;
@@ -106,7 +225,8 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       success: true,
-      imageUrl,
+      imageUrl, // Keep for backward compatibility
+      fileUrl: imageUrl, // More generic name
       result,
     });
   } catch (error) {

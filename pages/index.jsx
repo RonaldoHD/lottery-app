@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getAllDraws, getProductsByDrawId } from '../lib/pocketbase';
+import { getAllDraws, getProductsByDrawId, getAllEbooks } from '../lib/pocketbase';
 import Howtowin from '../components/Howtowin';
 import Footer from '../components/Footer';
 
@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 export default function Home() {
   const [draws, setDraws] = useState([]);
   const [drawProducts, setDrawProducts] = useState({});
+  const [ebooks, setEbooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,10 +18,14 @@ export default function Home() {
     
     const loadDraws = async () => {
       try {
-        const data = await getAllDraws();
+        const [data, ebooksData] = await Promise.all([
+          getAllDraws(),
+          getAllEbooks().catch(() => []) // Don't fail if ebooks collection doesn't exist
+        ]);
         if (!mounted) return;
         
         setDraws(data || []);
+        setEbooks(ebooksData || []);
         setError(null);
         
         // Load products for each draw
@@ -87,15 +92,15 @@ export default function Home() {
         <div className="hero-glow"></div>
         
         <div className="container-main text-center">
-          <div className="hero-badge mb-4 sm:mb-6">
+          {/* <div className="hero-badge mb-4 sm:mb-6">
             <span className="hero-pulse"></span>
             Live Draws Available
-          </div>
+          </div> */}
           
           <h2 className="heading-1 mb-4 sm:mb-6">
-            Win Your Dream
+            Browse products and 
             <span className="block text-accent">
-              Prizes Today
+            Win Prizes Today
             </span>
           </h2>
           
@@ -126,6 +131,140 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Ebooks Section - Carousel Style */}
+      {ebooks.length > 0 && (
+        <section className="section-spacing bg-[var(--winzone-purple-dark)]/30">
+          <div className="container-main">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-10 gap-4">
+              <div>
+                <h3 className="heading-2">Ebooks</h3>
+                <p className="text-body-sm mt-1">Browse our collection of premium ebooks</p>
+              </div>
+            </div>
+
+            {/* Carousel Container */}
+            <div className="relative">
+              {/* Navigation Buttons */}
+              {ebooks.length > 2 && (
+                <>
+                  <button
+                    onClick={() => {
+                      const container = document.getElementById('ebooks-carousel');
+                      if (container) {
+                        const scrollAmount = window.innerWidth < 640 
+                          ? container.offsetWidth / 2 
+                          : window.innerWidth < 1024 
+                            ? container.offsetWidth / 2 
+                            : window.innerWidth < 1280
+                              ? container.offsetWidth / 3
+                              : container.offsetWidth / 4;
+                        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                      }
+                    }}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-[var(--winzone-purple-light)]/80 hover:bg-[var(--winzone-purple-light)] text-white p-2 rounded-full shadow-lg transition-all hidden sm:flex items-center justify-center"
+                    aria-label="Previous ebooks"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const container = document.getElementById('ebooks-carousel');
+                      if (container) {
+                        const scrollAmount = window.innerWidth < 640 
+                          ? container.offsetWidth / 2 
+                          : window.innerWidth < 1024 
+                            ? container.offsetWidth / 2 
+                            : window.innerWidth < 1280
+                              ? container.offsetWidth / 3
+                              : container.offsetWidth / 4;
+                        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                      }
+                    }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-[var(--winzone-purple-light)]/80 hover:bg-[var(--winzone-purple-light)] text-white p-2 rounded-full shadow-lg transition-all hidden sm:flex items-center justify-center"
+                    aria-label="Next ebooks"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              {/* Carousel */}
+              <div
+                id="ebooks-carousel"
+                className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory pb-4 -mx-4 px-4"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+              >
+                {ebooks.map((ebook) => {
+                  // Handle image field - PocketBase file fields can be strings (URLs) or objects
+                  const imageUrl = typeof ebook.image === 'string' 
+                    ? ebook.image 
+                    : ebook.image_url || (ebook.image && typeof ebook.image === 'object' ? ebook.image.url : null);
+                  
+                  return (
+                    <Link
+                      key={ebook.id}
+                      href={`/single_ebook/${ebook.id}`}
+                      className="group bg-[var(--winzone-purple-light)]/20 border border-[var(--winzone-purple-light)]/30 rounded-2xl overflow-hidden hover:border-[var(--winzone-orange)]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[var(--winzone-orange)]/20 flex-shrink-0 snap-start"
+                      style={{
+                        width: 'calc(50% - 12px)',
+                        minWidth: 'calc(50% - 12px)',
+                      }}
+                    >
+                      {/* Ebook Image */}
+                      <div className="relative aspect-[3/4] bg-[var(--winzone-purple-light)]/10 overflow-hidden">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={ebook.name || 'Ebook'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg className="w-16 h-16 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3 bg-[var(--winzone-orange)] text-white text-xs font-bold px-3 py-1 rounded-full">
+                          ${ebook.price || '0'}
+                        </div>
+                      </div>
+
+                      {/* Ebook Info */}
+                      <div className="p-4">
+                        <h4 className="text-white font-semibold text-lg mb-2 group-hover:text-[var(--winzone-orange)] transition-colors line-clamp-2">
+                          {ebook.name || 'Ebook'}
+                        </h4>
+                        {ebook.pages && (
+                          <p className="text-slate-400 text-sm mb-3">
+                            {ebook.pages} pages
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-[var(--winzone-orange)] font-bold text-lg">
+                            ${ebook.price || '0'}
+                          </span>
+                          <span className="text-slate-400 text-sm group-hover:text-[var(--winzone-orange)] transition-colors">
+                            View Details →
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Draws Grid */}
       <section className="section-spacing">

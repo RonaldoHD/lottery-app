@@ -13,7 +13,176 @@ import {
   deleteProduct,
   getSubmissionsByDrawId,
   updateSubmissionStatus,
+  getAllEbooks,
+  createEbook,
+  updateEbook,
+  deleteEbook,
 } from '../../lib/pocketbase';
+
+// PDF Upload Component
+function PDFUpload({ value, onChange, label = "PDF File" }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [pdfUrl, setPdfUrl] = useState(value || '');
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    setPdfUrl(value || '');
+  }, [value]);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setUploadError('Please select a PDF file');
+      return;
+    }
+
+    // Validate file size (max 50MB for PDFs)
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError('PDF must be less than 50MB');
+      return;
+    }
+
+    setUploadError('');
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('collection', 'ebooks_content'); // Specify the collection
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.instructions) {
+          throw new Error(`${data.error}\n\n${data.instructions}`);
+        }
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      const pdfUrl = data.fileUrl || data.imageUrl;
+      setPdfUrl(pdfUrl);
+      onChange(pdfUrl);
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError(error.message || 'Failed to upload PDF');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleUrlChange = (e) => {
+    const url = e.target.value;
+    setPdfUrl(url);
+    onChange(url);
+    setUploadError('');
+  };
+
+  const handleRemovePDF = () => {
+    setPdfUrl('');
+    onChange('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-slate-300">
+        {label}
+      </label>
+      
+      {/* Preview/Info */}
+      {pdfUrl && (
+        <div className="relative w-full bg-slate-800 rounded-xl p-4 border border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-12 h-12 bg-rose-500/20 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate">PDF File</p>
+              <a 
+                href={pdfUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-amber-400 text-xs hover:text-amber-300 truncate block"
+              >
+                {pdfUrl}
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={handleRemovePDF}
+              className="p-1.5 bg-rose-500 hover:bg-rose-600 rounded-lg transition-colors flex-shrink-0"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Area */}
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <input
+            type="url"
+            value={pdfUrl}
+            onChange={handleUrlChange}
+            placeholder="Paste PDF URL or upload..."
+            className="w-full bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all placeholder-slate-500 text-sm"
+          />
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isUploading ? (
+            <svg className="w-5 h-5 text-amber-500 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {uploadError && (
+        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg">
+          <p className="text-rose-400 text-xs whitespace-pre-wrap">{uploadError}</p>
+        </div>
+      )}
+      
+      <p className="text-slate-500 text-xs">
+        Upload a PDF file (max 50MB, stored in PocketBase) or paste a URL
+      </p>
+    </div>
+  );
+}
 
 // Image Upload Component
 function ImageUpload({ value, onChange, label = "Image" }) {
@@ -52,6 +221,7 @@ function ImageUpload({ value, onChange, label = "Image" }) {
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
+        credentials: 'include', // Include cookies for admin authentication
       });
 
       const data = await response.json();
@@ -176,14 +346,17 @@ export default function AdminDashboard() {
   const [selectedDraw, setSelectedDraw] = useState(null);
   const [products, setProducts] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [ebooks, setEbooks] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
   
   // Modal states
   const [showDrawModal, setShowDrawModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showEbookModal, setShowEbookModal] = useState(false);
   const [editingDraw, setEditingDraw] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [editingEbook, setEditingEbook] = useState(null);
   
   // Form states
   const [drawForm, setDrawForm] = useState({
@@ -202,6 +375,14 @@ export default function AdminDashboard() {
     image_url: '',
   });
 
+  const [ebookForm, setEbookForm] = useState({
+    name: '',
+    content: '',
+    pages: '',
+    price: '',
+    image: '',
+  });
+
   // Auth check
   useEffect(() => {
     if (!loading && !isAuthenticated()) {
@@ -211,15 +392,24 @@ export default function AdminDashboard() {
     
     if (!loading && isAuthenticated() && !hasLoadedInitialData && !isLoadingData) {
       loadDraws();
+      if (activeTab === 'ebooks') {
+        loadEbooks();
+      }
       setHasLoadedInitialData(true);
     }
-  }, [loading, isAuthenticated, hasLoadedInitialData, isLoadingData]);
+  }, [loading, isAuthenticated, hasLoadedInitialData, isLoadingData, activeTab]);
 
   useEffect(() => {
     if (selectedDraw && isAuthenticated()) {
       loadDrawDetails(selectedDraw.id);
     }
   }, [selectedDraw]);
+
+  useEffect(() => {
+    if (activeTab === 'ebooks' && isAuthenticated()) {
+      loadEbooks();
+    }
+  }, [activeTab]);
 
   const loadDraws = async () => {
     setIsLoadingData(true);
@@ -246,6 +436,18 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadEbooks = async () => {
+    setIsLoadingData(true);
+    try {
+      const data = await getAllEbooks();
+      setEbooks(data);
+    } catch (error) {
+      console.error('Error loading ebooks:', error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
   const resetDrawForm = () => {
     setDrawForm({
       title: '',
@@ -266,6 +468,17 @@ export default function AdminDashboard() {
       image_url: '',
     });
     setEditingProduct(null);
+  };
+
+  const resetEbookForm = () => {
+    setEbookForm({
+      name: '',
+      content: '',
+      pages: '',
+      price: '',
+      image: '',
+    });
+    setEditingEbook(null);
   };
 
   const handleCreateDraw = async (e) => {
@@ -383,6 +596,62 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCreateEbook = async (e) => {
+    e.preventDefault();
+    try {
+      await createEbook({
+        ...ebookForm,
+        pages: ebookForm.pages ? parseInt(ebookForm.pages) : null,
+        price: ebookForm.price ? parseFloat(ebookForm.price) : 0,
+      });
+      setShowEbookModal(false);
+      resetEbookForm();
+      loadEbooks();
+    } catch (error) {
+      alert('Error creating ebook: ' + error.message);
+    }
+  };
+
+  const handleEditEbook = (ebook) => {
+    setEditingEbook(ebook);
+    setEbookForm({
+      name: ebook.name || '',
+      content: ebook.content || '',
+      pages: ebook.pages || '',
+      price: ebook.price || '',
+      image: typeof ebook.image === 'string' ? ebook.image : ebook.image_url || '',
+    });
+    setShowEbookModal(true);
+  };
+
+  const handleUpdateEbook = async (e) => {
+    e.preventDefault();
+    if (!editingEbook) return;
+    try {
+      await updateEbook(editingEbook.id, {
+        ...ebookForm,
+        pages: ebookForm.pages ? parseInt(ebookForm.pages) : null,
+        price: ebookForm.price ? parseFloat(ebookForm.price) : 0,
+      });
+      setShowEbookModal(false);
+      resetEbookForm();
+      loadEbooks();
+    } catch (error) {
+      alert('Error updating ebook: ' + error.message);
+    }
+  };
+
+  const handleDeleteEbook = async (id) => {
+    if (confirm('Are you sure you want to delete this ebook?')) {
+      try {
+        await deleteEbook(id);
+        loadEbooks();
+      } catch (error) {
+        alert('Error deleting ebook: ' + error.message);
+      }
+    }
+  };
+
   const handleLogout = () => {
     logout();
   };
@@ -443,7 +712,7 @@ export default function AdminDashboard() {
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
-          {['draws', 'submissions'].map((tab) => (
+          {['draws', 'ebooks', 'submissions'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -689,6 +958,104 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === 'ebooks' && (
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-white">Ebooks</h2>
+              <button
+                onClick={() => {
+                  resetEbookForm();
+                  setShowEbookModal(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-rose-500 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-rose-600 transition-all shadow-lg"
+              >
+                Add Ebook
+              </button>
+            </div>
+
+            {isLoadingData ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
+              </div>
+            ) : ebooks.length === 0 ? (
+              <p className="text-slate-500 text-center py-8">No ebooks yet. Create one!</p>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {ebooks.map((ebook) => {
+                  const imageUrl = typeof ebook.image === 'string' 
+                    ? ebook.image 
+                    : ebook.image_url || (ebook.image && typeof ebook.image === 'object' ? ebook.image.url : null);
+                  
+                  return (
+                    <div key={ebook.id} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+                      {imageUrl && (
+                        <div className="h-48 bg-slate-700">
+                          <img 
+                            src={imageUrl} 
+                            alt={ebook.name || 'Ebook'}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-medium truncate">{ebook.name || 'Untitled'}</h4>
+                            <div className="flex items-center gap-3 mt-2">
+                              {ebook.pages && (
+                                <span className="text-slate-400 text-sm">{ebook.pages} pages</span>
+                              )}
+                              <span className="text-amber-400 font-semibold">${ebook.price || '0'}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 ml-2">
+                            <button
+                              onClick={() => handleEditEbook(ebook)}
+                              className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEbook(ebook.id)}
+                              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        {ebook.content && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <svg className="w-4 h-4 text-rose-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <a 
+                              href={typeof ebook.content === 'string' ? ebook.content : ebook.content.url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-400 text-sm hover:text-amber-300 truncate"
+                            >
+                              View PDF
+                            </a>
+                          </div>
+                        )}
+                        <div className="mt-3 pt-3 border-t border-slate-700">
+                          <p className="text-slate-500 text-xs">
+                            Created: {new Date(ebook.created).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'submissions' && (
           <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
             <h2 className="text-lg font-semibold text-white mb-6">All Submissions</h2>
@@ -882,6 +1249,103 @@ export default function AdminDashboard() {
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-rose-600 transition-all shadow-lg shadow-amber-500/25"
                 >
                   {editingProduct ? 'Save Changes' : 'Add Product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Ebook Modal */}
+      {showEbookModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-800">
+              <h2 className="text-xl font-bold text-white">
+                {editingEbook ? 'Edit Ebook' : 'Create New Ebook'}
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                {editingEbook ? 'Update the ebook details below' : 'Fill in the details to create a new ebook'}
+              </p>
+            </div>
+            <form onSubmit={editingEbook ? handleUpdateEbook : handleCreateEbook} className="p-6 space-y-5">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Ebook Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={ebookForm.name}
+                  onChange={(e) => setEbookForm({ ...ebookForm, name: e.target.value })}
+                  placeholder="e.g., Complete Guide to Web Development"
+                  className="w-full bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all placeholder-slate-500"
+                  required
+                />
+              </div>
+
+              {/* PDF Content Upload */}
+              <PDFUpload
+                value={ebookForm.content}
+                onChange={(url) => setEbookForm({ ...ebookForm, content: url })}
+                label="Ebook PDF Content"
+              />
+
+              {/* Pages & Price */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Pages
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={ebookForm.pages}
+                    onChange={(e) => setEbookForm({ ...ebookForm, pages: e.target.value })}
+                    placeholder="e.g., 250"
+                    className="w-full bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all placeholder-slate-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={ebookForm.price}
+                    onChange={(e) => setEbookForm({ ...ebookForm, price: e.target.value })}
+                    placeholder="e.g., 29.99"
+                    className="w-full bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all placeholder-slate-500"
+                  />
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <ImageUpload
+                value={ebookForm.image}
+                onChange={(url) => setEbookForm({ ...ebookForm, image: url })}
+                label="Ebook Image"
+              />
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEbookModal(false);
+                    resetEbookForm();
+                  }}
+                  className="flex-1 px-6 py-3 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-rose-600 transition-all shadow-lg shadow-amber-500/25"
+                >
+                  {editingEbook ? 'Save Changes' : 'Create Ebook'}
                 </button>
               </div>
             </form>

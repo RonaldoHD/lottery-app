@@ -425,6 +425,26 @@ body {
   scrollbar-width: none;     /* Firefox */
 }
 
+/* Ebook carousel responsive widths */
+@media (min-width: 640px) {
+  #ebooks-carousel > a {
+    width: calc(50% - 12px) !important;
+    min-width: calc(50% - 12px) !important;
+  }
+}
+@media (min-width: 1024px) {
+  #ebooks-carousel > a {
+    width: calc(33.333% - 16px) !important;
+    min-width: calc(33.333% - 16px) !important;
+  }
+}
+@media (min-width: 1280px) {
+  #ebooks-carousel > a {
+    width: calc(25% - 18px) !important;
+    min-width: calc(25% - 18px) !important;
+  }
+}
+
 
 
 @media (min-width: 640px) {

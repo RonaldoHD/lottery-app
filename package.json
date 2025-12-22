@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "form-data": "^4.0.5",
     "formidable": "^3.5.4",
     "next": "latest",
     "pocketbase": "^0.21.1",
