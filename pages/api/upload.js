@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import fs from 'fs';
 
 const POCKETBASE_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://pocketbase-j884wkkkcwws8s8sk8wc0kw0.72.61.197.220.sslip.io';
+const FILE_DOMAIN = process.env.NEXT_PUBLIC_FILE_DOMAIN || 'https://api.mycoolifyserver.online';
 
 // Disable Next.js body parser for file uploads
 export const config = {
@@ -107,6 +108,17 @@ export default async function handler(req, res) {
     let result;
     let imageUrl;
 
+    // Get collection ID from PocketBase (needed for correct file URL)
+    let collectionId;
+    try {
+      const collectionInfo = await pb.collections.getOne(collection);
+      collectionId = collectionInfo.id;
+    } catch (e) {
+      console.error('Error fetching collection info:', e);
+      // Fallback: try to extract from filePath if available later
+      collectionId = null;
+    }
+
     // Read file and create File object for PocketBase SDK
     // PocketBase SDK works best with File/Blob objects (Node.js 18+)
     const filePath = uploadedFile.filepath;
@@ -119,9 +131,39 @@ export default async function handler(req, res) {
       // Update existing record with new image
       result = await pb.collection(collection).update(recordId, { image: file });
       
-      // Get the file URL from PocketBase
-      if (result.image) {
-        imageUrl = pb.files.getUrl(result, result.image);
+      // Get the file URL from PocketBase and convert to custom domain
+      if (result.image && result.id) {
+        // Extract filename from result.image
+        let filename = result.image;
+        let extractedCollectionId = null;
+        
+        // If result.image is a full URL, try to extract collection ID from it
+        if (filename.includes('/api/files/')) {
+          const parts = filename.split('/api/files/')[1]?.split('/');
+          if (parts && parts.length >= 1) {
+            extractedCollectionId = parts[0];
+            filename = parts[parts.length - 1];
+          }
+        } else if (filename.includes('/')) {
+          filename = filename.split('/').pop();
+        }
+        filename = filename.split('?')[0];
+        
+        // Use extracted collection ID if available, otherwise fetch it
+        if (extractedCollectionId) {
+          collectionId = extractedCollectionId;
+        } else if (!collectionId) {
+          try {
+            const collectionInfo = await pb.collections.getOne(collection);
+            collectionId = collectionInfo.id;
+          } catch (e) {
+            console.error('Error fetching collection ID for update:', e);
+          }
+        }
+        // Construct URL with custom domain using collection ID
+        // Format: {domain}/api/files/{collectionId}/{recordId}/{filename} (no field name in path)
+        const urlCollection = collectionId || collection;
+        imageUrl = `${FILE_DOMAIN}/api/files/${urlCollection}/${result.id}/${filename}`;
       }
     } else {
       // Create a new record in the specified collection
@@ -141,40 +183,91 @@ export default async function handler(req, res) {
 
         result = await pb.collection(collection).create(data);
         
-        // Get the file URL from PocketBase
+        // Get the file URL from PocketBase and convert to custom domain
         // For ebooks_content, the field is 'content'; for uploads, it's 'file' or 'image'
+        let filePath = null;
+        let fileField = null;
+        
         if (collection === 'ebooks_content') {
           if (result.content) {
-            imageUrl = pb.files.getUrl(result, result.content);
+            fileField = 'content';
+            filePath = result.content;
           }
         } else {
           // Check all possible file field names for uploads collection
           if (result.file) {
-            imageUrl = pb.files.getUrl(result, result.file);
+            fileField = 'file';
+            filePath = result.file;
           } else if (result.image) {
-            imageUrl = pb.files.getUrl(result, result.image);
+            fileField = 'image';
+            filePath = result.image;
           } else {
             // Try to find any file field
             const fileFields = Object.keys(result).filter(key => 
               typeof result[key] === 'string' && result[key].includes('/api/files/')
             );
             if (fileFields.length > 0) {
-              imageUrl = pb.files.getUrl(result, result[fileFields[0]]);
+              fileField = fileFields[0];
+              filePath = result[fileFields[0]];
             }
           }
         }
         
-        // Fallback: construct URL manually if we have the record ID
-        if (!imageUrl) {
-          const fileField = collection === 'ebooks_content' ? 'content' : (result.file || result.image || 'file');
-          if (result.id && fileField) {
-            imageUrl = `${POCKETBASE_URL}/api/files/${collection}/${result.id}/${fileField}`;
+        // Construct URL with custom domain
+        if (filePath && result.id) {
+          // Extract filename from filePath (it might be a full URL or just the filename)
+          let filename = filePath;
+          let extractedCollectionId = null;
+          
+          // If filePath is a full URL, try to extract collection ID from it
+          // Format: /api/files/{collectionId}/{recordId}/{field}/{filename}
+          if (filePath.includes('/api/files/')) {
+            const parts = filePath.split('/api/files/')[1]?.split('/');
+            if (parts && parts.length >= 1) {
+              extractedCollectionId = parts[0]; // First part after /api/files/ is collection ID
+              filename = parts[parts.length - 1]; // Last part is filename
+            }
+          } else if (filePath.includes('/')) {
+            // If it's just a path, extract the filename
+            filename = filePath.split('/').pop();
           }
-        }
-        
-        // Ensure we have a full URL (not relative)
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = `${POCKETBASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+          
+          // Remove query parameters if present
+          filename = filename.split('?')[0];
+          
+          // Use extracted collection ID if available, otherwise fetch it
+          if (extractedCollectionId) {
+            collectionId = extractedCollectionId;
+          } else if (!collectionId) {
+            try {
+              const collectionInfo = await pb.collections.getOne(collection);
+              collectionId = collectionInfo.id;
+            } catch (e) {
+              console.error('Error fetching collection ID:', e);
+            }
+          }
+          
+          // Construct URL with custom domain using collection ID: {domain}/api/files/{collectionId}/{recordId}/{filename} (no field name in path)
+          const urlCollection = collectionId || collection;
+          imageUrl = `${FILE_DOMAIN}/api/files/${urlCollection}/${result.id}/${filename}`;
+        } else if (result.id) {
+          // Fallback: construct URL manually if we have the record ID but no file path
+          fileField = collection === 'ebooks_content' ? 'content' : (result.file || result.image || 'file');
+          // Use the fileName variable that was set earlier, or construct from result
+          const fallbackFileName = result.name || fileName || `${fileField}_${result.id}`;
+          
+          // Ensure we have collection ID
+          if (!collectionId) {
+            try {
+              const collectionInfo = await pb.collections.getOne(collection);
+              collectionId = collectionInfo.id;
+            } catch (e) {
+              console.error('Error fetching collection ID for fallback:', e);
+            }
+          }
+          
+          const urlCollection = collectionId || collection;
+          imageUrl = `${FILE_DOMAIN}/api/files/${urlCollection}/${result.id}/${fallbackFileName}`;
         }
       } catch (error) {
         console.error('Upload collection error:', error);
