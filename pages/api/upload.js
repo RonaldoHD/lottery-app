@@ -212,7 +212,7 @@ export default async function handler(req, res) {
             }
           }
         }
-        
+        console.log("Hello")
         // Construct URL with custom domain
         if (filePath && result.id) {
           // Extract filename from filePath (it might be a full URL or just the filename)
